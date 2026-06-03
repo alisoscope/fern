@@ -1,0 +1,23 @@
+[package]
+name = "fern"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "test"
+
+[dependencies]
+anyhow = "1.0.102"
+ash = "0.38.0"
+chrono = "0.4.44"
+sdl3 = { version = "0.18.4", features = ["ash"] }
+
+[features]
+default = ["log-level-debug", "vulkan-validation-layers"]
+#default = ["log-level-minimal"]
+#default = ["log-level-standard"]
+vulkan-validation-layers = []
+log-level-panics = []
+log-level-release = ["log-level-panics"]
+log-level-debug = ["log-level-release"]
+log-level-verbose-debug = ["log-level-debug"]
