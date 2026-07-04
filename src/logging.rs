@@ -1,4 +1,5 @@
 use std::cell::OnceCell;
+use std::panic;
 use std::fmt;
 use std::fs;
 use std::io;
@@ -29,7 +30,7 @@ pub fn log_global(log_type: LogType, args: fmt::Arguments) {
 pub struct GlobalLoggerContext;
 
 impl GlobalLoggerContext {
-    pub fn init(config: LoggerConfig) -> Self {
+    pub fn init(config: LoggerConfig, set_panic_hook: bool) -> Self {
         let mut guard = GLOBAL_LOGGER.write().unwrap();
         if let Some(logger) = guard.as_ref() {
             let args = format_args!(
@@ -42,6 +43,48 @@ impl GlobalLoggerContext {
         let logger = Logger::new(config).unwrap();
         logger.log(LogType::Info, format_args!("Initialised logging."));
         guard.replace(logger);
+
+        if set_panic_hook {
+            panic::set_hook(Box::new(|info| {
+                let location = info.location();
+                let payload = info.payload_as_str();
+                if let Some(payload) = payload {
+                    let args = if let Some(location) = location {
+                        format_args!(
+                            "Panicked at {}:{}:{}: {}.",
+                            location.file(),
+                            location.line(),
+                            location.column(),
+                            payload,
+                        )
+                    } else {
+                        format_args!(
+                            "{}.",
+                            payload,
+                        )
+                    };
+                    log_global(
+                        LogType::Panic,
+                        args,
+                    );
+                } else {
+                    let args = if let Some(location) = location {
+                        format_args!(
+                            "Panicked at {}:{}:{}: unsupported payload.",
+                            location.file(),
+                            location.line(),
+                            location.column(),
+                        )
+                    } else {
+                        format_args!("Panicked with unsupported payload.")
+                    };
+                    log_global(
+                        LogType::Panic,
+                        args,
+                    );
+                }
+            })); 
+        }
 
         Self
     }
@@ -203,7 +246,7 @@ impl Logger {
     }
     pub fn log(&self, log_type: LogType, args: fmt::Arguments) {
         let date_time = chrono::Local::now();
-
+ 
         let thread_name = LOCAL_THREAD_NAME.with(|cell| {
             cell.get_or_init(|| {
                 thread::current().name().map(Arc::from)
@@ -222,25 +265,6 @@ impl Logger {
             eprintln!("Failed to send log with error: {}.", e);
         }
     }
-}
-
-#[cfg(feature = "log-level-panics")]
-#[macro_export]
-macro_rules! log_panic {
-    ($($arg:tt)*) => {
-        {
-            $crate::logging::log_global($crate::logging::LogType::Panic, format_args!($($arg)*));
-            panic!($($arg)*);
-        }
-    };
-}
-
-#[cfg(not(feature = "log-level-panics"))]
-#[macro_export]
-macro_rules! log_panic {
-    ($($arg:tt)*) => {
-        panic!($($arg)*)
-    };
 }
 
 #[cfg(feature = "log-level-release")]
@@ -291,7 +315,7 @@ impl LogType {
             Self::Info => "Info",
             Self::Warning => "Warning",
             Self::Error => "Error",
-            Self::Panic => "Panic!",
+            Self::Panic => "Panic",
         }
     }
     pub fn ansi_code(self) -> &'static str {
