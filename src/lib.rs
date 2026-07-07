@@ -1,7 +1,7 @@
 
 pub mod logging;
 pub mod app;
-pub mod io;
+pub mod input;
 pub mod graphics;
 pub mod math;
 

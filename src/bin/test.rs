@@ -261,9 +261,25 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut i = 0f32;
 
+    use input::ActionBinding;
+    use sdl3::keyboard::Scancode;
+
+    let space_action = app.input.register_action("space", ActionBinding::Scancode(Scancode::Space));
+    let other_action = app.input.register_action("other", Scancode::Space.into());
+
     app.main_loop(|app| {
         //camera_rotation *= glam::Quat::from_axis_angle(glam::Vec3::Z, 0.01f32);
         let projection = glam::camera::rh::proj::directx::perspective_infinite(f32::to_radians(80f32), app.aspect_ratio, 0.1f32);
+
+        if app.input.action_down(space_action) {
+            log_release!(LogType::Info, "Space down.");
+        }
+        if app.input.action_pressed(space_action) {
+            log_release!(LogType::Info, "Space pressed.");
+        }
+        if app.input.action_released(other_action) {
+            log_release!(LogType::Info, "Other space released.");
+        }
 
         let dt = 1f32 / 60f32;
 
@@ -271,6 +287,7 @@ pub fn main() -> anyhow::Result<()> {
         let mouse_move_sens = 1f32;
         let mouse_scroll_sens = 0.1f32;
 
+        /*
         camera_distance += app.io_state.scroll * mouse_scroll_sens;
         camera_distance= f32::clamp(camera_distance, 1f32, 50f32);
 
@@ -279,17 +296,20 @@ pub fn main() -> anyhow::Result<()> {
             camera_pitch += app.io_state.relative_mouse_state.y() * mouse_sens * dt;
             camera_pitch = f32::clamp(camera_pitch, -std::f32::consts::PI / 2f32, std::f32::consts::PI / 2f32);
         }
+        */
 
         let camera_rotation = 
             glam::Quat::from_axis_angle(glam::Vec3::Z, camera_yaw) *
             glam::Quat::from_axis_angle(glam::Vec3::X, camera_pitch);
         
+        /*
         if app.io_state.mouse_state.right() {
             let camera_move = glam::vec3(app.io_state.relative_mouse_state.x(), 0.0, app.io_state.relative_mouse_state.y()) * mouse_move_sens * dt;
             let camera_move = camera_rotation * camera_move;
             camera_focal+= camera_move;
         }
 
+*/
         /*
          *
          * IOSystem::poll(&mut IOStateAccumulator);
